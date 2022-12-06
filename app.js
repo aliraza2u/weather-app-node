@@ -2,6 +2,8 @@ const http = require("http");
 const url = require("url");
 const { MongoClient } = require("mongodb");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 
 const hostname = "127.0.0.1";
 const port = 4000;
@@ -49,7 +51,10 @@ const createRecord = async (weatherResult, location) => {
 
 //! creart server
 const server = http.createServer((req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*"); /* @dev First, read about security */
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  ); /* @dev First, read about security */
   res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET");
   res.setHeader("Access-Control-Max-Age", 2592000); // 30 days
 
@@ -58,6 +63,7 @@ const server = http.createServer((req, res) => {
 
   res.statusCode = 200;
   res.setHeader("Content-Type", "application/json");
+
   if (req.url === "/api") {
     const handleDb = async () => {
       let data = await dbConnect();
@@ -66,6 +72,44 @@ const server = http.createServer((req, res) => {
       res.end();
     };
     handleDb();
+  } else if (req.url === "/") {
+    fs.readFile(
+      path.join(__dirname, "public", "index.html"),
+      (err, content) => {
+        if (err) throw err;
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(content);
+      }
+    );
+  } else if (req.url === "/style.css") {
+    fs.readFile(path.join(__dirname, "public", "style.css"), (err, content) => {
+      if (err) throw err;
+      res.writeHead(200, { "Content-Type": "text/css" });
+      res.end(content);
+    });
+  }
+  const images = [
+    "bit.jpeg",
+    "ca.jpeg",
+    "hub.png",
+    "jira.jpeg",
+    "linkedin.png",
+    "Logo.png",
+    "UNHLogo.png",
+    "writesea.png",
+  ];
+  for (const image of images) {
+    if (req.url === `/Images/${image}`) {
+      fs.readFile(
+        path.join(__dirname, "public/Images", image),
+        (err, content) => {
+          if (err) console.log(err);;
+
+          res.writeHead(200, { "Content-Type": `image/${image.split(".")[1]}` });
+          res.end(content);
+        }
+      );
+    }
   }
   if (pathname === "/forcast") {
     const getForcast = async () => {
@@ -83,7 +127,8 @@ const server = http.createServer((req, res) => {
         const dailyWeather =
           data?.data &&
           data.data.list.find(
-            (x) => new Date(x.dt_txt).getDate() === new Date(currentDate).getDate()
+            (x) =>
+              new Date(x.dt_txt).getDate() === new Date(currentDate).getDate()
           );
         weatherResult.push(dailyWeather);
       }
@@ -101,12 +146,16 @@ const server = http.createServer((req, res) => {
         latitude: params?.latitude,
         cnt: params?.ctn,
       });
-      res.write(JSON.stringify({ hourlyForcast: horulyForcastData?.data?.list }));
+      res.write(
+        JSON.stringify({ hourlyForcast: horulyForcastData?.data?.list })
+      );
       res.end();
     })();
   }
 });
 
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
+server.listen(process.env.PORT || 4000, hostname, () => {
+  console.log(
+    `Server running at http://${hostname}:${process.env.PORT || 4000}/`
+  );
 });
